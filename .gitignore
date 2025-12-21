@@ -1,0 +1,18 @@
+# Exclude build folders
+Debug/
+Release/
+obj/
+
+# Exclude compilation artifacts
+*.o
+*.d
+*.lss
+*.map
+*.hex
+*.elf
+*.eep
+
+# Exclude Microchip Studio system files
+*.atsuo
+*.bak
+.vs/
