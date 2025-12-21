@@ -120,9 +120,79 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ASW\asw_process_mgr.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ASW\asw_process_mgr.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ASW\asw_ui_manager.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ASW\asw_ui_manager.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\HAL\hal_ds18b20.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\HAL\hal_ds18b20.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\HAL\hal_encoder.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\HAL\hal_encoder.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\HAL\hal_oled.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\HAL\hal_oled.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\HAL\hal_relay.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\HAL\hal_relay.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\MCAL\mcal_clock.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\MCAL\mcal_gpio.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\MCAL\mcal_gpio.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\MCAL\mcal_gpio_cfg.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\MCAL\mcal_i2c.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\MCAL\mcal_i2c.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\MCAL\mcal_std_types.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\MCAL\mcal_uart.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSW\MCAL\mcal_uart.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="main.c">
       <SubType>compile</SubType>
     </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="BSW\HAL\" />
+    <Folder Include="BSW\MCAL\" />
+    <Folder Include="ASW" />
+    <Folder Include="BSW" />
+    <Folder Include="Datasheets" />
   </ItemGroup>
   <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets" />
 </Project>
