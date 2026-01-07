@@ -15,14 +15,14 @@
 
 /* --- Status & Logic --- */
 typedef enum {
-	E_NOT_OK = 0U,
-	E_OK     = 1U
-} enStd_ReturnType;
+	E_OK     = 0U,
+	E_NOT_OK = 1U
+} Std_ReturnType_t;
 
 typedef enum {
 	FALSE = 0U,
 	TRUE  = 1U
-} enBool_t;
+} Bool_t;
 
 #define NULL_PTR ((void*)0)
 

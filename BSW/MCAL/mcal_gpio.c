@@ -10,8 +10,8 @@
 /**
  * @brief Configures a GPIO pin as either an input or an output.
  */
-enStd_ReturnType enMcal_Gpio_Init(const stMcal_Gpio_Config_t* pstPin, enMcal_Gpio_Direction_t enDir) {
-    enStd_ReturnType enRet = E_NOT_OK;
+Std_ReturnType_t Mcal_Gpio_Init(const Mcal_Gpio_Config_t* pstPin, Mcal_Gpio_Direction_t enDir) {
+    Std_ReturnType_t enRetVal = E_NOT_OK;
 
     /* Security check: Ensure we aren't dereferencing a null pointer */
     if (NULL_PTR != pstPin) {
@@ -22,16 +22,16 @@ enStd_ReturnType enMcal_Gpio_Init(const stMcal_Gpio_Config_t* pstPin, enMcal_Gpi
             /* Clear the bit in the Data Direction Register */
             *(pstPin->pu8Ddr) &= ~(1U << pstPin->u8PinNum);
         }
-        enRet = E_OK;
+        enRetVal = E_OK;
     }
-    return enRet;
+    return enRetVal;
 }
 
 /**
  * @brief Sets the logical state of an output pin.
  */
-enStd_ReturnType enMcal_Gpio_Write(const stMcal_Gpio_Config_t* pstPin, enMcal_Gpio_Level_t enLevel) {
-    enStd_ReturnType enRet = E_NOT_OK;
+Std_ReturnType_t Mcal_Gpio_Write(const Mcal_Gpio_Config_t* pstPin, Mcal_Gpio_Level_t enLevel) {
+    Std_ReturnType_t enRetVal = E_NOT_OK;
 
     if (NULL_PTR != pstPin) {
         if (GPIO_HIGH == enLevel) {
@@ -41,16 +41,16 @@ enStd_ReturnType enMcal_Gpio_Write(const stMcal_Gpio_Config_t* pstPin, enMcal_Gp
             /* Clear bit in the Port register */
             *(pstPin->pu8Port) &= ~(1U << pstPin->u8PinNum);
         }
-        enRet = E_OK;
+        enRetVal = E_OK;
     }
-    return enRet;
+    return enRetVal;
 }
 
 /**
  * @brief Reads the current physical state of a GPIO pin.
  */
-enMcal_Gpio_Level_t enMcal_Gpio_Read(const stMcal_Gpio_Config_t* pstPin) {
-    enMcal_Gpio_Level_t enRetLevel = GPIO_LOW;
+Mcal_Gpio_Level_t Mcal_Gpio_Read(const Mcal_Gpio_Config_t* pstPin) {
+    Mcal_Gpio_Level_t enRetLevel = GPIO_LOW;
 
     if (NULL_PTR != pstPin) {
         /* Check the bit in the Input (PIN) register */
@@ -66,7 +66,7 @@ enMcal_Gpio_Level_t enMcal_Gpio_Read(const stMcal_Gpio_Config_t* pstPin) {
 /**
  * @brief Inverts the current state of an output pin.
  */
-void vMcal_Gpio_Toggle(const stMcal_Gpio_Config_t* pstPin) {
+void Mcal_Gpio_Toggle(const Mcal_Gpio_Config_t* pstPin) {
     if (NULL_PTR != pstPin) {
         /* XOR the bit to flip it */
         *(pstPin->pu8Port) ^= (1U << pstPin->u8PinNum);

@@ -10,7 +10,7 @@
 #define MCAL_CLOCK_H_
 
 /* Include the types */
-#include "../MCAL/mcal_std_types.h"
+#include "mcal_std_types.h"
 
 /* CPU clock speed */
 #ifndef F_CPU
