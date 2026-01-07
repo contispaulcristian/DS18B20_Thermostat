@@ -6,78 +6,99 @@
  */ 
 
 #include "asw_ui_manager.h"
+#include "asw_process_mgr.h"
 #include "hal_encoder.h"
 #include "hal_encoder_cfg.h"
 #include "hal_oled.h"
-#include "mcal_gpio_cfg.h"
 #include <stdio.h>
 
-/* --- Private Variables --- */
-static Bool_t bIsSettingsMode = FALSE;
-static uint8_t u8BlinkCounter = 0;
+/* UI States */
+typedef enum {
+	UI_SCREEN_MONITOR,
+	UI_SCREEN_SETTINGS
+} UiScreen_t;
 
-void Asw_Ui_HandleInput(float* pfTargetTemp) {
-    if (NULL_PTR != pfTargetTemp) {
-        EncoderEvent_t enEvent = Hal_Encoder_GetEvent(&Hal_Encoder_DefaultCfg);
+static UiScreen_t g_enCurrentScreen = UI_SCREEN_MONITOR;
 
-        /* Toggle Settings Mode on Button Press */
-        if (ENCODER_BTN_PRESSED == enEvent) {
-            bIsSettingsMode = !bIsSettingsMode;
-        }
-
-        /* Adjust Threshold only if in Settings Mode */
-        if (TRUE == bIsSettingsMode) {
-            if (ENCODER_CW == enEvent) {
-                *pfTargetTemp += 0.5f; /* Increment by 0.5C */
-            } 
-            else if (ENCODER_CCW == enEvent) {
-                *pfTargetTemp -= 0.5f; /* Decrement by 0.5C */
-            }
-        }
-    }
+void Asw_Ui_Init(void) {
+	Hal_Oled_Init();
+	Hal_Oled_Clear();
+	Hal_Encoder_Init(&Hal_Encoder_DefaultCfg);
 }
 
-void Asw_Ui_UpdateDisplay(float fCurrentTemp, float fTargetTemp, Bool_t bHeaterOn, Bool_t bCoolerOn) {
-    char au8Buffer[16];
-    u8BlinkCounter++;
+/* Global Static variables to remember what is currently on screen */
+static float s_fLastTemp = -99.0f;
+static float s_fLastTarget = -99.0f;
+static Bool_t s_bLastHeater = FALSE;
+static Bool_t s_bLastCooler = FALSE;
+static UiScreen_t s_enLastScreen = UI_SCREEN_MONITOR;
 
-    /* --- TOP ROW: CURRENT TEMPERATURE --- */
-    /* Blink "Temp" word if in Settings Mode */
-    if ((FALSE == bIsSettingsMode) || (u8BlinkCounter % 10 < 5)) {
-        Hal_Oled_WriteString(0, 0, "Temp:"); 
-    } else {
-        Hal_Oled_WriteString(0, 0, "     "); 
-    }
+void Asw_Ui_Run(void) {
+	SystemState_t stState;
+	EncoderEvent_t enEvent;
+	char au8Buffer[16];
+	Bool_t bRedrawNeeded = FALSE;
 
-    /* Print Current Temp: e.g., "22.5 *C" */
-    sprintf(au8Buffer, "%d.%d *C", (int)fCurrentTemp, (int)(fCurrentTemp * 10) % 10);
-    Hal_Oled_WriteString(35, 0, au8Buffer);
+	/* 1. Get Inputs */
+	enEvent = Hal_Encoder_GetEvent(&Hal_Encoder_DefaultCfg);
+	Asw_Process_GetState(&stState);
 
-    /* --- MIDDLE ROWS: STATUS & ICONS --- */
-    
-    /* Heater Section (Fire Icon + Status) */
-    if (TRUE == bHeaterOn) {
-        Hal_Oled_DrawIcon(90, 0, g_au8IconFire);
-        Hal_Oled_WriteString(110, 0, "ON ");
-    } else {
-        Hal_Oled_WriteString(110, 0, "OFF");
-    }
+	/* 2. Handle Logic (Screen Switching) */
+	if (g_enCurrentScreen == UI_SCREEN_MONITOR) {
+		if (ENCODER_BTN_PRESSED == enEvent) {
+			g_enCurrentScreen = UI_SCREEN_SETTINGS;
+			bRedrawNeeded = TRUE; /* Force redraw on screen switch */
+		}
+	}
+	else if (g_enCurrentScreen == UI_SCREEN_SETTINGS) {
+		if (ENCODER_CW == enEvent) Asw_Process_SetTargetTemp(stState.fTargetTemp + 0.5f);
+		else if (ENCODER_CCW == enEvent) Asw_Process_SetTargetTemp(stState.fTargetTemp - 0.5f);
+		else if (ENCODER_BTN_PRESSED == enEvent) {
+			g_enCurrentScreen = UI_SCREEN_MONITOR;
+			bRedrawNeeded = TRUE;
+		}
+	}
 
-    /* Fan Section (Fan Icon + Status) */
-    if (TRUE == bCoolerOn) {
-        Hal_Oled_DrawIcon(90, 2, g_au8IconFan);
-        Hal_Oled_WriteString(110, 2, "ON ");
-    } else {
-        Hal_Oled_WriteString(110, 2, "OFF");
-    }
+	/* 3. Check for Data Changes (Anti-Flicker Logic) */
+	if (g_enCurrentScreen != s_enLastScreen) {
+		bRedrawNeeded = TRUE;
+		s_enLastScreen = g_enCurrentScreen;
+		Hal_Oled_Clear(); /* Only Clear if changing screens! */
+	}
 
-    /* --- BOTTOM ROW: SETTINGS FEEDBACK --- */
-    if (TRUE == bIsSettingsMode) {
-        /* Show the current threshold being set */
-        sprintf(au8Buffer, "SET: %d.%d", (int)fTargetTemp, (int)(fTargetTemp * 10) % 10);
-        Hal_Oled_WriteString(0, 3, au8Buffer);
-    } else {
-        /* Clear the settings line when in Read Mode */
-        Hal_Oled_WriteString(0, 3, "          ");
-    }
+	if (g_enCurrentScreen == UI_SCREEN_MONITOR) {
+		/* Check if Temp or Relay status changed */
+		if ((stState.fCurrentTemp != s_fLastTemp) ||
+		(stState.bHeaterOn != s_bLastHeater) ||
+		(stState.bCoolerOn != s_bLastCooler) ||
+		(TRUE == bRedrawNeeded)) {
+			
+			/* Update Cache */
+			s_fLastTemp = stState.fCurrentTemp;
+			s_bLastHeater = stState.bHeaterOn;
+			s_bLastCooler = stState.bCoolerOn;
+
+			/* DRAW MONITOR SCREEN */
+			sprintf(au8Buffer, "%d.%d", (int)stState.fCurrentTemp, (int)(stState.fCurrentTemp * 10) % 10);
+			Hal_Oled_WriteString(0, 1, au8Buffer);
+			Hal_Oled_WriteString(30, 1, "{C");
+
+			if (TRUE == stState.bHeaterOn) Hal_Oled_DrawIcon32(96, g_au8IconFire);
+			else if (TRUE == stState.bCoolerOn) Hal_Oled_DrawIcon32(96, g_au8IconFan);
+			else Hal_Oled_DrawIcon32(96, g_au8IconSmiley);
+		}
+	}
+	else if (g_enCurrentScreen == UI_SCREEN_SETTINGS) {
+		/* Check if Target Temp changed */
+		if ((stState.fTargetTemp != s_fLastTarget) || (TRUE == bRedrawNeeded)) {
+			
+			/* Update Cache */
+			s_fLastTarget = stState.fTargetTemp;
+
+			/* DRAW SETTINGS SCREEN */
+			Hal_Oled_WriteString(10, 0, "Set Temperature:");
+			sprintf(au8Buffer, "%d.%d {C", (int)stState.fTargetTemp, (int)(stState.fTargetTemp * 10) % 10);
+			Hal_Oled_WriteString(40, 2, au8Buffer);
+		}
+	}
 }

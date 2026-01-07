@@ -130,40 +130,40 @@ static uint8_t Hal_Ds18b20_ReadByte(const Mcal_Gpio_Config_t* pstPin) {
     return u8Result;
 }
 
-/**
- * @brief Reads the temperature and converts it to Celsius.
- * @param pstPin Pointer to the 1-Wire bus pin.
- * @param pfTemp_out Pointer to float result.
- * @return E_OK if communication succeeded.
- */
-Std_ReturnType_t Hal_Ds18b20_ReadTemp(const Mcal_Gpio_Config_t* pstPin, float* pfTemp_out) {
+
+
+
+/* Keep your existing defines (RESET_PULSE, etc.) and helper functions 
+   (Reset, WriteBit, ReadBit, WriteByte, ReadByte) exactly as they were. 
+   I am only showing the new functions below. */
+
+/* ... [Paste your existing helper functions here: Reset, WriteBit, ReadBit, etc.] ... */
+
+Std_ReturnType_t Hal_Ds18b20_StartConversion(const Mcal_Gpio_Config_t* pstPin) {
+    if (E_OK == Hal_Ds18b20_Reset(pstPin)) {
+        Hal_Ds18b20_WriteByte(pstPin, DS18B20_CMD_SKIP_ROM);
+        Hal_Ds18b20_WriteByte(pstPin, DS18B20_CMD_CONVERT_T);
+        return E_OK;
+    }
+    return E_NOT_OK;
+}
+
+Std_ReturnType_t Hal_Ds18b20_ReadResult(const Mcal_Gpio_Config_t* pstPin, float* pfTemp_out) {
     uint8_t u8Lsb, u8Msb;
     int16_t i16RawTemp;
-    Std_ReturnType_t enStatus = E_NOT_OK;
 
-    if ((NULL_PTR != pstPin) && (NULL_PTR != pfTemp_out)) {
-        /* Start Conversion Process */
-        if (E_OK == Hal_Ds18b20_Reset(pstPin)) {
-            Hal_Ds18b20_WriteByte(pstPin, DS18B20_CMD_SKIP_ROM);
-            Hal_Ds18b20_WriteByte(pstPin, DS18B20_CMD_CONVERT_T);
-            
-            _delay_ms(DS18B20_CONVERSION_TIME_MS);
+    if (E_OK == Hal_Ds18b20_Reset(pstPin)) {
+        Hal_Ds18b20_WriteByte(pstPin, DS18B20_CMD_SKIP_ROM);
+        Hal_Ds18b20_WriteByte(pstPin, DS18B20_CMD_READ_SCRATCHPAD);
 
-            /* Read Data from Scratchpad */
-            if (E_OK == Hal_Ds18b20_Reset(pstPin)) {
-                Hal_Ds18b20_WriteByte(pstPin, DS18B20_CMD_SKIP_ROM);
-                Hal_Ds18b20_WriteByte(pstPin, DS18B20_CMD_READ_SCRATCHPAD);
+        u8Lsb = Hal_Ds18b20_ReadByte(pstPin);
+        u8Msb = Hal_Ds18b20_ReadByte(pstPin);
 
-                u8Lsb = Hal_Ds18b20_ReadByte(pstPin);
-                u8Msb = Hal_Ds18b20_ReadByte(pstPin);
-
-                /* Combine and calculate Celsius (0.0625 deg per bit) */
-                i16RawTemp = (int16_t)((u8Msb << 8) | u8Lsb);
-                *pfTemp_out = (float)i16RawTemp * 0.0625f;
-                
-                enStatus = E_OK;
-            }
-        }
+        /* Convert to Celsius */
+        i16RawTemp = (int16_t)((u8Msb << 8) | u8Lsb);
+        *pfTemp_out = (float)i16RawTemp * 0.0625f;
+        
+        return E_OK;
     }
-    return enStatus;
+    return E_NOT_OK;
 }

@@ -9,13 +9,25 @@
 #ifndef ASW_UI_MANAGER_H_
 #define ASW_UI_MANAGER_H_
 
+
 #include "mcal_std_types.h"
 
-/** @brief Handles encoder input and toggles between READ and SETTINGS mode */
-void Asw_Ui_HandleInput(float* pfTargetTemp);
+/* --- Function Prototypes --- */
 
-/** @brief Updates OLED with Blink logic, Icons, and ON/OFF status */
-void Asw_Ui_UpdateDisplay(float fCurrentTemp, float fTargetTemp, Bool_t bHeaterOn, Bool_t bCoolerOn);
+/** * @brief Initializes the User Interface.
+ * Sets up the OLED display (clears it) and the Encoder hardware.
+ * Should be called once during system startup.
+ */
+void Asw_Ui_Init(void);
+
+/** * @brief Main UI Task.
+ * 1. Polls the Encoder for input.
+ * 2. Manages the UI State Machine (Monitor Mode vs. Settings Mode).
+ * 3. Updates the OLED display based on the current state and process data.
+ * * This function should be called cyclically (e.g., every 10ms) to ensure
+ * fluid response to button presses.
+ */
+void Asw_Ui_Run(void);
 
 
 #endif /* ASW_UI_MANAGER_H_ */

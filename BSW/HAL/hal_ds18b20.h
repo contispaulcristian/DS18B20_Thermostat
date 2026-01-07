@@ -31,7 +31,16 @@ Std_ReturnType_t Hal_Ds18b20_Init(const Mcal_Gpio_Config_t* pstPin);
  * @param pfTemp_out Pointer to store the result in Celsius.
  * @return Std_ReturnType_t E_OK if successful.
  */
-Std_ReturnType_t Hal_Ds18b20_ReadTemp(const Mcal_Gpio_Config_t* pstPin, float* pfTemp_out);
+//Std_ReturnType_t Hal_Ds18b20_ReadTemp(const Mcal_Gpio_Config_t* pstPin, float* pfTemp_out);
+
+
+
+
+/* Step 1: Tell sensor to start measuring (Returns immediately) */
+Std_ReturnType_t Hal_Ds18b20_StartConversion(const Mcal_Gpio_Config_t* pstPin);
+
+/* Step 2: Read the result (Call this 750ms after Step 1) */
+Std_ReturnType_t Hal_Ds18b20_ReadResult(const Mcal_Gpio_Config_t* pstPin, float* pfTemp_out);
 
 
 #endif /* HAL_DS18B20_H_ */

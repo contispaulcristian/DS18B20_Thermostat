@@ -9,14 +9,28 @@
 #ifndef ASW_PROCESS_MGR_H_
 #define ASW_PROCESS_MGR_H_
 
+
 #include "mcal_std_types.h"
 
-/**
- * @brief Executes the thermostat logic using hysteresis.
- * @param fCurrentTemp The current temperature from the sensor.
- * @param fTargetTemp The user-defined setpoint.
- */
-void Asw_Process_ControlLoop(float fCurrentTemp, float fTargetTemp);
+/* Data structure to share system state with UI */
+typedef struct {
+	float fCurrentTemp;
+	float fTargetTemp;
+	Bool_t bHeaterOn;
+	Bool_t bCoolerOn;
+} SystemState_t;
+
+/** @brief Initializes the process manager (default target temp) */
+void Asw_Process_Init(void);
+
+/** @brief Runs the main control logic (Hysteresis) */
+void Asw_Process_Run(void);
+
+/** @brief Setter for the User Interface to change target temp */
+void Asw_Process_SetTargetTemp(float fNewTarget);
+
+/** @brief Getter for the UI to read system status */
+void Asw_Process_GetState(SystemState_t* pstState);
 
 
 #endif /* ASW_PROCESS_MGR_H_ */

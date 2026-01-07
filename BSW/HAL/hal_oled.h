@@ -26,11 +26,19 @@ void Hal_Oled_Clear(void);
 /** @brief Draws a string of text at X,Y coordinates */
 void Hal_Oled_WriteString(uint8_t u8X, uint8_t u8Y, const char* pszStr);
 
-/** @brief Draws a 16x16 icon at X,Y coordinates */
-void Hal_Oled_DrawIcon(uint8_t u8X, uint8_t u8Y, const uint8_t* pu8Bitmap);
+/** * @brief Draws a large 32x32 icon (Spans all 4 pages vertically).
+ * @param u8X Horizontal start position (0-96).
+ * @param pu8Bitmap Pointer to the 128-byte icon array.
+ */
+void Hal_Oled_DrawIcon32(uint8_t u8X, const uint8_t* pu8Bitmap);
 
-/* --- Icon Data Externs --- */
-extern const uint8_t g_au8IconFire[32];
-extern const uint8_t g_au8IconFan[32];
+/* --- 32x32 Icon Data Externs --- */
+extern const uint8_t g_au8IconFire[128];
+extern const uint8_t g_au8IconFan[128];
+extern const uint8_t g_au8IconSmiley[128];
 
 #endif /* HAL_OLED_H_ */
+
+
+
+
