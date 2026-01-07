@@ -74,41 +74,106 @@ const uint8_t g_au8IconFan[32] = {
 /**
  * @brief Internal helper to send a command to the OLED.
  */
-static void Hal_Oled_WriteCommand(uint8_t u8Cmd_in) {
-    (void)Mcal_I2c_Start(OLED_I2C_ADDR);
-    (void)Mcal_I2c_Write(OLED_CMD_MODE); 
-    (void)Mcal_I2c_Write(u8Cmd_in);      
-    Mcal_I2c_Stop();
+static I2cStatus_t Hal_Oled_WriteCommand(uint8_t u8Cmd_in) {
+	I2cStatus_t enStatus;
+	
+	/* Check if the Start condition was ACKed by the OLED */
+	enStatus = Mcal_I2c_Start(OLED_I2C_ADDR);
+	
+	if (I2C_OK == enStatus) {
+		(void)Mcal_I2c_Write(OLED_CMD_MODE);
+		(void)Mcal_I2c_Write(u8Cmd_in);
+		Mcal_I2c_Stop();
+	}
+	
+	return enStatus;
 }
+
 
 I2cStatus_t Hal_Oled_Init(void) {
-    Hal_Oled_WriteCommand(0xAE); /* Display OFF */
-    Hal_Oled_WriteCommand(0xD5); /* Set Display Clock Divide Ratio */
-    Hal_Oled_WriteCommand(0x80); 
-    Hal_Oled_WriteCommand(0xA8); /* Set Multiplex Ratio */
-    Hal_Oled_WriteCommand(0x1F); /* 1/32 Duty (for 128x32) */
-    Hal_Oled_WriteCommand(0x8D); /* Charge Pump */
-    Hal_Oled_WriteCommand(0x14); /* Enable Charge Pump */
-    Hal_Oled_WriteCommand(0xAF); /* Display ON */
-    return I2C_OK;
+	/* 1. Turn Display OFF */
+	Hal_Oled_WriteCommand(0xAE);
+
+	/* 2. Set Clock (Standard value) */
+	Hal_Oled_WriteCommand(0xD5);
+	Hal_Oled_WriteCommand(0x80);
+
+	/* 3. Set Multiplex Ratio (32 rows = 0x1F) */
+	Hal_Oled_WriteCommand(0xA8);
+	Hal_Oled_WriteCommand(0x1F);
+
+	/* 4. Set Display Offset (0) */
+	Hal_Oled_WriteCommand(0xD3);
+	Hal_Oled_WriteCommand(0x00);
+
+	/* 5. Set Start Line (0) */
+	Hal_Oled_WriteCommand(0x40);
+
+	/* 6. Charge Pump Setting (Essential for 3.3V/5V operation) */
+	Hal_Oled_WriteCommand(0x8D);
+	Hal_Oled_WriteCommand(0x14);
+
+	/* 7. Memory Addressing Mode: 0x02 = PAGE Addressing Mode */
+	/* This matches how Hal_Oled_WriteString works */
+	Hal_Oled_WriteCommand(0x20);
+	Hal_Oled_WriteCommand(0x02);
+
+	/* 8. Segment Remap (Flip Horizontal) */
+	/* 0xA1 = Column 127 is mapped to SEG0 */
+	Hal_Oled_WriteCommand(0xA1);
+
+	/* 9. COM Output Scan Direction (Flip Vertical) */
+	/* 0xC8 = Scan from COM[N-1] to COM0 */
+	Hal_Oled_WriteCommand(0xC8);
+
+	/* 10. COM Pins Hardware Configuration */
+	/* 0x02 is critical for 128x32 displays. (0x12 is for 128x64) */
+	Hal_Oled_WriteCommand(0xDA);
+	Hal_Oled_WriteCommand(0x02);
+
+	/* 11. Contrast Control */
+	Hal_Oled_WriteCommand(0x81);
+	Hal_Oled_WriteCommand(0x8F);
+
+	/* 12. Pre-charge Period */
+	Hal_Oled_WriteCommand(0xD9);
+	Hal_Oled_WriteCommand(0xF1);
+
+	/* 13. VCOMH Deselect Level */
+	Hal_Oled_WriteCommand(0xDB);
+	Hal_Oled_WriteCommand(0x40);
+
+	/* 14. Enable Display */
+	Hal_Oled_WriteCommand(0xA4); /* Resume from RAM */
+	Hal_Oled_WriteCommand(0xA6); /* Normal Display (not inverted) */
+	Hal_Oled_WriteCommand(0xAF); /* Display ON */
+
+	return I2C_OK;
 }
+
 
 void Hal_Oled_Clear(void) {
-    uint16_t u16PixelIdx;
-    Hal_Oled_WriteCommand(0x21); // Column Address
-    Hal_Oled_WriteCommand(0);
-    Hal_Oled_WriteCommand(127);
-    Hal_Oled_WriteCommand(0x22); // Page Address
-    Hal_Oled_WriteCommand(0);
-    Hal_Oled_WriteCommand(3);
+	uint8_t u8PageIdx;
+	uint8_t u8ColIdx;
 
-    (void)Mcal_I2c_Start(OLED_I2C_ADDR);
-    (void)Mcal_I2c_Write(OLED_DATA_MODE);
-    for (u16PixelIdx = 0; u16PixelIdx < (128 * 32 / 8); u16PixelIdx++) {
-        (void)Mcal_I2c_Write(0x00);
-    }
-    Mcal_I2c_Stop();
+	/* Loop through all 4 pages (128x32 screen has 4 pages of 8 bits height) */
+	for (u8PageIdx = 0; u8PageIdx < 4; u8PageIdx++) {
+		/* Set Cursor to start of the page */
+		Hal_Oled_WriteCommand(0xB0 + u8PageIdx); /* Set Page Start Address */
+		Hal_Oled_WriteCommand(0x00);             /* Set Low Column Start */
+		Hal_Oled_WriteCommand(0x10);             /* Set High Column Start */
+
+		/* Send 128 zeros to clear this page */
+		(void)Mcal_I2c_Start(OLED_I2C_ADDR);
+		(void)Mcal_I2c_Write(OLED_DATA_MODE);
+		
+		for (u8ColIdx = 0; u8ColIdx < 128; u8ColIdx++) {
+			(void)Mcal_I2c_Write(0x00);
+		}
+		Mcal_I2c_Stop();
+	}
 }
+
 
 void Hal_Oled_WriteString(uint8_t u8X, uint8_t u8Y, const char* pszStr) {
     while (*pszStr) {

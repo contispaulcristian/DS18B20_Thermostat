@@ -50,3 +50,10 @@ uint8_t Mcal_Uart_Read(void) {
     /* Get and return received data from buffer */
     return UDR0;
 }
+
+void Mcal_Uart_WriteString(const char* pszStr) {
+	while (*pszStr) {
+		Mcal_Uart_Write((uint8_t)*pszStr);
+		pszStr++;
+	}
+}

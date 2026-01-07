@@ -12,7 +12,7 @@
 #include "mcal_i2c.h"
 
 /* --- OLED Definitions --- */
-#define OLED_I2C_ADDR          0x3C
+#define OLED_I2C_ADDR          0x78
 #define OLED_CMD_MODE          0x00
 #define OLED_DATA_MODE         0x40
 

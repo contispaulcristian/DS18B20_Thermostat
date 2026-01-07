@@ -53,4 +53,9 @@ void Mcal_Uart_Write(uint8_t u8Data_in);
  */
 uint8_t Mcal_Uart_Read(void);
 
+/**
+ * @brief 
+ */
+void Mcal_Uart_WriteString(const char* pszStr);
+
 #endif /* MCAL_UART_H_ */
