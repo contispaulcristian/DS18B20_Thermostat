@@ -108,6 +108,7 @@ static uint8_t Hal_Ds18b20_ReadBit(const Mcal_Gpio_Config_t* pstPin) {
     return u8BitValue;
 }
 
+
 /**
  * @brief Writes a full byte to the DS18B20 (LSB first).
  */
@@ -116,6 +117,7 @@ static void Hal_Ds18b20_WriteByte(const Mcal_Gpio_Config_t* pstPin, uint8_t u8Da
         Hal_Ds18b20_WriteBit(pstPin, (u8Data_in >> u8Idx) & 0x01);
     }
 }
+
 
 /**
  * @brief Reads a full byte from the DS18B20.
@@ -131,14 +133,9 @@ static uint8_t Hal_Ds18b20_ReadByte(const Mcal_Gpio_Config_t* pstPin) {
 }
 
 
-
-
-/* Keep your existing defines (RESET_PULSE, etc.) and helper functions 
-   (Reset, WriteBit, ReadBit, WriteByte, ReadByte) exactly as they were. 
-   I am only showing the new functions below. */
-
-/* ... [Paste your existing helper functions here: Reset, WriteBit, ReadBit, etc.] ... */
-
+/**
+ * @brief 
+ */
 Std_ReturnType_t Hal_Ds18b20_StartConversion(const Mcal_Gpio_Config_t* pstPin) {
     if (E_OK == Hal_Ds18b20_Reset(pstPin)) {
         Hal_Ds18b20_WriteByte(pstPin, DS18B20_CMD_SKIP_ROM);
@@ -148,6 +145,10 @@ Std_ReturnType_t Hal_Ds18b20_StartConversion(const Mcal_Gpio_Config_t* pstPin) {
     return E_NOT_OK;
 }
 
+
+/**
+ * @brief 
+ */
 Std_ReturnType_t Hal_Ds18b20_ReadResult(const Mcal_Gpio_Config_t* pstPin, float* pfTemp_out) {
     uint8_t u8Lsb, u8Msb;
     int16_t i16RawTemp;

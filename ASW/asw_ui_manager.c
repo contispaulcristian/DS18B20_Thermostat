@@ -39,11 +39,11 @@ void Asw_Ui_Run(void) {
 	char au8Buffer[16];
 	Bool_t bRedrawNeeded = FALSE;
 
-	/* 1. Get Inputs */
+	/* Get Inputs */
 	enEvent = Hal_Encoder_GetEvent(&Hal_Encoder_DefaultCfg);
 	Asw_Process_GetState(&stState);
 
-	/* 2. Handle Logic (Screen Switching) */
+	/* Handle Logic (Screen Switching) */
 	if (g_enCurrentScreen == UI_SCREEN_MONITOR) {
 		if (ENCODER_BTN_PRESSED == enEvent) {
 			g_enCurrentScreen = UI_SCREEN_SETTINGS;
@@ -59,7 +59,7 @@ void Asw_Ui_Run(void) {
 		}
 	}
 
-	/* 3. Check for Data Changes (Anti-Flicker Logic) */
+	/* Check for Data Changes (Anti-Flicker Logic) */
 	if (g_enCurrentScreen != s_enLastScreen) {
 		bRedrawNeeded = TRUE;
 		s_enLastScreen = g_enCurrentScreen;

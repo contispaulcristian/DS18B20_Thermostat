@@ -12,7 +12,9 @@
 #include "hal_relay.h"
 #include "mcal_gpio_cfg.h"
 
-#define ASW_TEMP_HYSTERESIS    0.5f
+#define HYSTERESIS_START_GAP  0.5f  /* Heater ON:  Target - 0.5 */
+#define HYSTERESIS_STOP_GAP   0.5f  /* Heater OFF: Target + 0.5 */
+#define FAN_SAFETY_GAP        1.0f  /* Fan ON:     Target + 1.0 */
 
 /* State Machine definitions */
 typedef enum {
@@ -57,24 +59,47 @@ void Asw_Process_Run(void) {
 			if (E_OK == Hal_Ds18b20_ReadResult(&Mcal_Ds18b20Bus, &g_fCurrentTemp)) {
 				/* Data is valid, run Logic immediately */
 				
-				/* --- CONTROL LOGIC --- */
-				if (g_fCurrentTemp < (g_fTargetTemp - ASW_TEMP_HYSTERESIS)) {
-					Hal_Relay_TurnOn(&Mcal_RelayHeater);
-					Hal_Relay_TurnOff(&Mcal_RelayCooler);
+				/* --- NEW CONTROL LOGIC --- */
+				
+				/* HEATER LOGIC */
+				/* ON if drops below Target - 0.5 */
+				if (g_fCurrentTemp <= (g_fTargetTemp - HYSTERESIS_START_GAP)) {
 					g_bHeaterState = TRUE;
-					g_bCoolerState = FALSE;
 				}
-				else if (g_fCurrentTemp > (g_fTargetTemp + ASW_TEMP_HYSTERESIS)) {
-					Hal_Relay_TurnOff(&Mcal_RelayHeater);
-					Hal_Relay_TurnOn(&Mcal_RelayCooler);
+				/* OFF if rises above Target + 0.5 */
+				else if (g_fCurrentTemp >= (g_fTargetTemp + HYSTERESIS_STOP_GAP)) {
 					g_bHeaterState = FALSE;
+				}
+				/* If between -0.5 and +0.5, keep previous g_bHeaterState */
+
+				/* COOLER LOGIC */
+				/* ON only if it overshoots to Target + 1.0 */
+				if (g_fCurrentTemp >= (g_fTargetTemp + FAN_SAFETY_GAP)) {
 					g_bCoolerState = TRUE;
 				}
-				else {
-					Hal_Relay_TurnOff(&Mcal_RelayHeater);
-					Hal_Relay_TurnOff(&Mcal_RelayCooler);
-					g_bHeaterState = FALSE;
+				/* OFF once it cools back down to Target + 0.5 */
+				else if (g_fCurrentTemp <= (g_fTargetTemp + HYSTERESIS_STOP_GAP)) {
 					g_bCoolerState = FALSE;
+				}
+				/* If between +0.5 and +1.0, keep previous g_bCoolerState */
+
+				/* SAFETY INTERLOCK */
+				/* If Fan needs to run, force Heater OFF */
+				if (g_bCoolerState == TRUE) {
+					g_bHeaterState = FALSE;
+				}
+
+				/* APPLY TO HARDWARE */
+				if (g_bHeaterState == TRUE) {
+					Hal_Relay_TurnOn(&Mcal_RelayHeater);
+					} else {
+					Hal_Relay_TurnOff(&Mcal_RelayHeater);
+				}
+
+				if (g_bCoolerState == TRUE) {
+					Hal_Relay_TurnOn(&Mcal_RelayCooler);
+					} else {
+					Hal_Relay_TurnOff(&Mcal_RelayCooler);
 				}
 			}
 			/* Go back to IDLE to start next loop */

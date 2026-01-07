@@ -12,19 +12,7 @@
 /* Static variable to store the last state of CLK (Pin A) */
 static uint8_t u8LastStateA = GPIO_HIGH;
 
-//void Hal_Encoder_Init(const Hal_Encoder_Config_t* pstConfig) {
-   // if (NULL_PTR != pstConfig) {
-        /* Initialize CLK and DT as inputs */
-  //      (void)Mcal_Gpio_Init(pstConfig->pstPinA, GPIO_INPUT);
-   //     (void)Mcal_Gpio_Init(pstConfig->pstPinB, GPIO_INPUT);
-        
-        /* Initialize SW as input with pull-up */
-    //    (void)Mcal_Gpio_Init(pstConfig->pstPinSW, GPIO_INPUT);
-        
-        /* Capture startup state */
-   //     u8LastStateA = Mcal_Gpio_Read(pstConfig->pstPinA);
-  //  }
-//}
+
 void Hal_Encoder_Init(const Hal_Encoder_Config_t* pstConfig) {
 	if (NULL_PTR != pstConfig) {
 		/* Initialize CLK (Pin A) as Input + Pull-Up */
@@ -55,7 +43,7 @@ EncoderEvent_t Hal_Encoder_GetEvent(const Hal_Encoder_Config_t* pstConfig) {
     uint8_t u8PinA, u8PinB;
 
     if (NULL_PTR != pstConfig) {
-        /* --- 1. Handle Button (Simple Debounce) --- */
+        /* Handle Button (Simple Debounce) */
         if (GPIO_LOW == Mcal_Gpio_Read(pstConfig->pstPinSW)) {
              /* Check again after small wait to confirm */
              _delay_us(100); 
@@ -67,7 +55,7 @@ EncoderEvent_t Hal_Encoder_GetEvent(const Hal_Encoder_Config_t* pstConfig) {
              }
         }
 
-        /* --- 2. Handle Rotation (State Machine) --- */
+        /* Handle Rotation (State Machine) */
         u8PinA = Mcal_Gpio_Read(pstConfig->pstPinA);
         u8PinB = Mcal_Gpio_Read(pstConfig->pstPinB);
         
