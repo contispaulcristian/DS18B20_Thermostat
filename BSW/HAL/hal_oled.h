@@ -36,9 +36,6 @@ void Hal_Oled_DrawIcon32(uint8_t u8X, const uint8_t* pu8Bitmap);
 extern const uint8_t g_au8IconFire[128];
 extern const uint8_t g_au8IconFan[128];
 extern const uint8_t g_au8IconSmiley[128];
+extern const uint8_t g_au8IconWarning[128];
 
 #endif /* HAL_OLED_H_ */
-
-
-
-

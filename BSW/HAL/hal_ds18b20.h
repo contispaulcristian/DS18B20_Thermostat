@@ -15,6 +15,7 @@
 #define DS18B20_CMD_SKIP_ROM         0xCCU
 #define DS18B20_CMD_CONVERT_T        0x44U
 #define DS18B20_CMD_READ_SCRATCHPAD  0xBEU
+#define DS18B20_CMD_MATCH_ROM        0x55U  
 
 /* --- Function Prototypes --- */
 
@@ -30,7 +31,7 @@ Std_ReturnType_t Hal_Ds18b20_Init(const Mcal_Gpio_Config_t* pstPin);
 Std_ReturnType_t Hal_Ds18b20_StartConversion(const Mcal_Gpio_Config_t* pstPin);
 
 /* Step 2: Read the result (Call this 750ms after Step 1) */
-Std_ReturnType_t Hal_Ds18b20_ReadResult(const Mcal_Gpio_Config_t* pstPin, float* pfTemp_out);
+Std_ReturnType_t Hal_Ds18b20_ReadResult(const Mcal_Gpio_Config_t* pstPin, const uint8_t* pu8ID, float* pfTemp_out);
 
 
 #endif /* HAL_DS18B20_H_ */

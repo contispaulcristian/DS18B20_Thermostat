@@ -32,5 +32,11 @@ void Asw_Process_SetTargetTemp(float fNewTarget);
 /** @brief Getter for the UI to read system status */
 void Asw_Process_GetState(SystemState_t* pstState);
 
+float Asw_Process_GetTemp1(void);
+float Asw_Process_GetTemp2(void);
+float Asw_Process_GetTemp3(void);
+uint8_t Asw_Process_GetWarning(void);
 
 #endif /* ASW_PROCESS_MGR_H_ */
+
+

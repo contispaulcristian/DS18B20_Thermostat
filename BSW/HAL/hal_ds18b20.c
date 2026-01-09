@@ -147,20 +147,38 @@ Std_ReturnType_t Hal_Ds18b20_StartConversion(const Mcal_Gpio_Config_t* pstPin) {
 
 
 /**
- * @brief 
+ * @brief Reads the temperature from a SPECIFIC sensor using its 64-bit ID.
+ * @param pstPin Pointer to GPIO config.
+ * @param pu8ID  Pointer to the 8-byte unique ID of the sensor.
+ * @param pfTemp_out Pointer to store the result.
  */
-Std_ReturnType_t Hal_Ds18b20_ReadResult(const Mcal_Gpio_Config_t* pstPin, float* pfTemp_out) {
+Std_ReturnType_t Hal_Ds18b20_ReadResult(const Mcal_Gpio_Config_t* pstPin, const uint8_t* pu8ID, float* pfTemp_out) {
     uint8_t u8Lsb, u8Msb;
     int16_t i16RawTemp;
+    uint8_t i;
 
+    /* 1. Reset Pulse */
     if (E_OK == Hal_Ds18b20_Reset(pstPin)) {
-        Hal_Ds18b20_WriteByte(pstPin, DS18B20_CMD_SKIP_ROM);
+        
+        /* 2. Select specific sensor (Match ROM 0x55) */
+        Hal_Ds18b20_WriteByte(pstPin, DS18B20_CMD_MATCH_ROM);
+
+        /* 3. Send the 8-byte ID */
+        for (i = 0; i < 8; i++) {
+            Hal_Ds18b20_WriteByte(pstPin, pu8ID[i]);
+        }
+
+        /* 4. Request Data (Read Scratchpad 0xBE) */
         Hal_Ds18b20_WriteByte(pstPin, DS18B20_CMD_READ_SCRATCHPAD);
 
+        /* 5. Read the first 2 bytes (Temperature LSB and MSB) */
         u8Lsb = Hal_Ds18b20_ReadByte(pstPin);
         u8Msb = Hal_Ds18b20_ReadByte(pstPin);
 
-        /* Convert to Celsius */
+        /* Reset again to stop sensor from sending more data */
+        Hal_Ds18b20_Reset(pstPin);
+
+        /* 6. Convert to Celsius */
         i16RawTemp = (int16_t)((u8Msb << 8) | u8Lsb);
         *pfTemp_out = (float)i16RawTemp * 0.0625f;
         

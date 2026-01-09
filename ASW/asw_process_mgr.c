@@ -6,116 +6,124 @@
  */ 
 
 
-/* asw_process_mgr.c */
 #include "asw_process_mgr.h"
 #include "hal_ds18b20.h"
 #include "hal_relay.h"
 #include "mcal_gpio_cfg.h"
 
-#define HYSTERESIS_START_GAP  0.5f  /* Heater ON:  Target - 0.5 */
-#define HYSTERESIS_STOP_GAP   0.5f  /* Heater OFF: Target + 0.5 */
-#define FAN_SAFETY_GAP        1.0f  /* Fan ON:     Target + 1.0 */
+#define HYSTERESIS_START_GAP  0.5f  
+#define HYSTERESIS_STOP_GAP   0.5f 
+#define FAN_SAFETY_GAP        1.0f  
 
-/* State Machine definitions */
-typedef enum {
-	TEMP_STATE_IDLE = 0,
-	TEMP_STATE_WAITING
-} TempState_t;
+/* Sensor IDs */
+const uint8_t u8Sensor1_ID[8] = {0x28, 0x31, 0x45, 0x47, 0x00, 0x00, 0x00, 0x99};
+const uint8_t u8Sensor2_ID[8] = {0x28, 0xB7, 0x3D, 0x47, 0x00, 0x00, 0x00, 0x92};
+const uint8_t u8Sensor3_ID[8] = {0x28, 0x7C, 0x20, 0x47, 0x00, 0x00, 0x00, 0x65};
 
-/* Private Variables */
-static float g_fTargetTemp = 26.0f;
-static float g_fCurrentTemp = 0.0f;
-static Bool_t g_bHeaterState = FALSE;
-static Bool_t g_bCoolerState = FALSE;
-
-/* State Machine Variables */
+/* State Variables */
+typedef enum { TEMP_STATE_IDLE = 0, TEMP_STATE_WAITING } TempState_t;
 static TempState_t g_enTempState = TEMP_STATE_IDLE;
-static uint16_t g_u16WaitCounter = 0;
+static uint16_t    g_u16WaitCounter = 0;
+
+static float   g_fTargetTemp = 26.0f;
+static float   g_fCurrentAvgTemp = 0.0f; 
+static uint8_t g_bHeaterState = 0;    
+static uint8_t g_bCoolerState = 0;
+static uint8_t g_bWarningActive = 0;
+
+/* Store individual temps so UI can read them */
+static float g_fTemp1 = 0.0f;
+static float g_fTemp2 = 0.0f;
+static float g_fTemp3 = 0.0f;
+
+static float GetDiff(float a, float b) {
+    return (a > b) ? (a - b) : (b - a);
+}
 
 void Asw_Process_Init(void) {
-	Hal_Relay_Init(&Mcal_RelayHeater);
-	Hal_Relay_Init(&Mcal_RelayCooler);
-	/* Start the first conversion immediately */
-	Hal_Ds18b20_StartConversion(&Mcal_Ds18b20Bus);
-	g_enTempState = TEMP_STATE_WAITING;
+    Hal_Relay_Init(&Mcal_RelayHeater);
+    Hal_Relay_Init(&Mcal_RelayCooler);
+    /* Note: Hal_Oled_Init is moved to UI Manager usually, or Main */
+    
+    Hal_Ds18b20_StartConversion(&Mcal_Ds18b20Bus);
+    g_enTempState = TEMP_STATE_WAITING;
 }
 
-/* This function must be called every 10ms */
 void Asw_Process_Run(void) {
-	
-	switch(g_enTempState) {
-		case TEMP_STATE_IDLE:
-		/* Start a new measurement */
-		Hal_Ds18b20_StartConversion(&Mcal_Ds18b20Bus);
-		g_u16WaitCounter = 0;
-		g_enTempState = TEMP_STATE_WAITING;
-		break;
+    switch(g_enTempState) {
+        case TEMP_STATE_IDLE:
+            Hal_Ds18b20_StartConversion(&Mcal_Ds18b20Bus);
+            g_u16WaitCounter = 0;
+            g_enTempState = TEMP_STATE_WAITING;
+            break;
 
-		case TEMP_STATE_WAITING:
-		g_u16WaitCounter++;
-		/* Wait for 75 ticks (75 * 10ms = 750ms) */
-		if (g_u16WaitCounter >= 75) {
-			/* Time is up! Read the data */
-			if (E_OK == Hal_Ds18b20_ReadResult(&Mcal_Ds18b20Bus, &g_fCurrentTemp)) {
-				/* Data is valid, run Logic immediately */
-				
-				/* --- NEW CONTROL LOGIC --- */
-				
-				/* HEATER LOGIC */
-				/* ON if drops below Target - 0.5 */
-				if (g_fCurrentTemp <= (g_fTargetTemp - HYSTERESIS_START_GAP)) {
-					g_bHeaterState = TRUE;
-				}
-				/* OFF if rises above Target + 0.5 */
-				else if (g_fCurrentTemp >= (g_fTargetTemp + HYSTERESIS_STOP_GAP)) {
-					g_bHeaterState = FALSE;
-				}
-				/* If between -0.5 and +0.5, keep previous g_bHeaterState */
+        case TEMP_STATE_WAITING:
+            g_u16WaitCounter++;
+            if (g_u16WaitCounter >= 75) {
+                /* READ SENSORS */
+                Hal_Ds18b20_ReadResult(&Mcal_Ds18b20Bus, u8Sensor1_ID, &g_fTemp1);
+                Hal_Ds18b20_ReadResult(&Mcal_Ds18b20Bus, u8Sensor2_ID, &g_fTemp2);
+                Hal_Ds18b20_ReadResult(&Mcal_Ds18b20Bus, u8Sensor3_ID, &g_fTemp3);
 
-				/* COOLER LOGIC */
-				/* ON only if it overshoots to Target + 1.0 */
-				if (g_fCurrentTemp >= (g_fTargetTemp + FAN_SAFETY_GAP)) {
-					g_bCoolerState = TRUE;
-				}
-				/* OFF once it cools back down to Target + 0.5 */
-				else if (g_fCurrentTemp <= (g_fTargetTemp + HYSTERESIS_STOP_GAP)) {
-					g_bCoolerState = FALSE;
-				}
-				/* If between +0.5 and +1.0, keep previous g_bCoolerState */
+                /* AVERAGE */
+                g_fCurrentAvgTemp = (g_fTemp1 + g_fTemp2 + g_fTemp3) / 3.0f;
 
-				/* SAFETY INTERLOCK */
-				/* If Fan needs to run, force Heater OFF */
-				if (g_bCoolerState == TRUE) {
-					g_bHeaterState = FALSE;
-				}
+                /* WARNING CHECK */
+                if (GetDiff(g_fTemp1, g_fTemp2) > 0.5f || 
+                    GetDiff(g_fTemp1, g_fTemp3) > 0.5f || 
+                    GetDiff(g_fTemp2, g_fTemp3) > 0.5f) {
+                    g_bWarningActive = 1;
+                } else {
+                    g_bWarningActive = 0;
+                }
 
-				/* APPLY TO HARDWARE */
-				if (g_bHeaterState == TRUE) {
-					Hal_Relay_TurnOn(&Mcal_RelayHeater);
-					} else {
-					Hal_Relay_TurnOff(&Mcal_RelayHeater);
-				}
+                /* LOGIC */
+                if (g_fCurrentAvgTemp <= (g_fTargetTemp - HYSTERESIS_START_GAP)) {
+                    g_bHeaterState = 1;
+                } else if (g_fCurrentAvgTemp >= (g_fTargetTemp + HYSTERESIS_STOP_GAP)) {
+                    g_bHeaterState = 0;
+                }
 
-				if (g_bCoolerState == TRUE) {
-					Hal_Relay_TurnOn(&Mcal_RelayCooler);
-					} else {
-					Hal_Relay_TurnOff(&Mcal_RelayCooler);
-				}
-			}
-			/* Go back to IDLE to start next loop */
-			g_enTempState = TEMP_STATE_IDLE;
-		}
-		break;
-	}
+                if (g_fCurrentAvgTemp >= (g_fTargetTemp + FAN_SAFETY_GAP)) {
+                    g_bCoolerState = 1;
+                } else if (g_fCurrentAvgTemp <= (g_fTargetTemp + HYSTERESIS_STOP_GAP)) {
+                    g_bCoolerState = 0;
+                }
+
+                if (g_bCoolerState == 1) g_bHeaterState = 0;
+
+                /* HARDWARE */
+                if (g_bHeaterState) Hal_Relay_TurnOn(&Mcal_RelayHeater);
+                else Hal_Relay_TurnOff(&Mcal_RelayHeater);
+
+                if (g_bCoolerState) Hal_Relay_TurnOn(&Mcal_RelayCooler);
+                else Hal_Relay_TurnOff(&Mcal_RelayCooler);
+
+                g_enTempState = TEMP_STATE_IDLE;
+            }
+            break;
+    }
+    /* NO DRAWING CODE HERE! */
 }
 
-/* ... Keep SetTargetTemp and GetState functions the same ... */
 void Asw_Process_SetTargetTemp(float fNewTarget) { g_fTargetTemp = fNewTarget; }
+
+/* Expanded this function to give all data to the UI */
 void Asw_Process_GetState(SystemState_t* pstState) {
-	if (pstState) {
-		pstState->fCurrentTemp = g_fCurrentTemp;
-		pstState->fTargetTemp = g_fTargetTemp;
-		pstState->bHeaterOn = g_bHeaterState;
-		pstState->bCoolerOn = g_bCoolerState;
-	}
+    if (pstState) {
+        pstState->fCurrentTemp = g_fCurrentAvgTemp; /* Still the main average */
+        pstState->fTargetTemp  = g_fTargetTemp;
+        pstState->bHeaterOn    = (g_bHeaterState == 1);
+        pstState->bCoolerOn    = (g_bCoolerState == 1);
+        
+        /* New fields you likely need to add to SystemState_t in asw_process_mgr.h */
+        /* If SystemState_t doesn't have these, UI will use fCurrentTemp, 
+           but we need a way to pass the 3 separate temps. */
+    }
 }
+
+/* Helper getters so UI can read individual sensors */
+float Asw_Process_GetTemp1(void) { return g_fTemp1; }
+float Asw_Process_GetTemp2(void) { return g_fTemp2; }
+float Asw_Process_GetTemp3(void) { return g_fTemp3; }
+uint8_t Asw_Process_GetWarning(void) { return g_bWarningActive; }
